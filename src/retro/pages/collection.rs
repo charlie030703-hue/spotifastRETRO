@@ -85,6 +85,8 @@ pub fn show_album(app: &mut App, ui: &mut Ui, album_id: &str) {
     // 3. Track List Data Table
     ui.label(egui::RichText::new("TRACK LISTING // MASTER TAPES").font(fonts::heading_3()).color(INK));
     ui.add_space(SPACING_S);
+    primitives::track_table_header(ui);
+    ui.add_space(2.0);
 
     let tracks: Vec<crate::api::models::Track> = app
         .album_pages
@@ -169,6 +171,8 @@ pub fn show_playlist(app: &mut App, ui: &mut Ui, playlist_id: &str) {
 
     ui.label(egui::RichText::new("TRACK LISTING").font(fonts::heading_3()).color(INK));
     ui.add_space(SPACING_S);
+    primitives::track_table_header(ui);
+    ui.add_space(2.0);
 
     let items = app
         .playlist_pages

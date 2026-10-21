@@ -31,6 +31,9 @@ pub fn show(app: &mut App, ui: &mut Ui) {
         return;
     }
 
+    primitives::track_table_header(ui);
+    ui.add_space(2.0);
+
     for (idx, song) in items.iter().enumerate() {
         let is_playing = idx == 0 && app.believed_playing();
         let dur_ms = song.duration_ms();

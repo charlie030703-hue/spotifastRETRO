@@ -334,7 +334,97 @@ pub fn text_link(ui: &mut Ui, text: &str, in_ribbon: bool) -> Response {
     response
 }
 
-/// Track list data table row.
+/// Draws an authentic Compact Disc with holographic iridescent reflections and transparent center hole.
+pub fn draw_cd(painter: &egui::Painter, center: Pos2, radius: f32, angle: f32) {
+    // 1. Outer disc body in aluminum silver
+    painter.circle_filled(center, radius, Color32::from_rgb(218, 224, 232));
+    painter.circle_stroke(center, radius, Stroke::new(1.0, Color32::from_rgb(90, 95, 105)));
+
+    // 2. Holographic rainbow diffraction sheen (dual opposing fans)
+    let colors = [
+        Color32::from_rgb(255, 130, 185), // pink
+        Color32::from_rgb(255, 224, 125), // gold
+        Color32::from_rgb(125, 242, 175), // green
+        Color32::from_rgb(95, 230, 250),  // cyan
+        Color32::from_rgb(168, 125, 255), // purple
+    ];
+
+    for (i, &col) in colors.iter().enumerate() {
+        let r = radius * (0.42 + (i as f32) * 0.095);
+        let a1 = angle + (i as f32) * 0.28;
+        let _a2 = a1 + std::f32::consts::PI;
+        // Paint subtle opposing diffraction sheen strokes
+        painter.circle_stroke(center, r, Stroke::new(1.8, col.linear_multiply(0.85)));
+        painter.circle_stroke(center, r, Stroke::new(1.8, col.linear_multiply(0.85)));
+    }
+
+    // 3. Concentric micro-groove tracks
+    painter.circle_stroke(center, radius * 0.88, Stroke::new(0.5, Color32::from_rgb(245, 248, 255)));
+    painter.circle_stroke(center, radius * 0.72, Stroke::new(0.5, Color32::from_rgb(175, 185, 198)));
+    painter.circle_stroke(center, radius * 0.55, Stroke::new(0.5, Color32::from_rgb(245, 248, 255)));
+
+    // 4. Mirror lead-in band
+    painter.circle_filled(center, radius * 0.38, Color32::from_rgb(235, 240, 248));
+    painter.circle_stroke(center, radius * 0.38, Stroke::new(1.0, Color32::from_rgb(160, 170, 185)));
+
+    // 5. Clear plastic inner hub ring
+    painter.circle_filled(center, radius * 0.32, Color32::from_rgb(246, 248, 252));
+    painter.circle_stroke(center, radius * 0.24, Stroke::new(1.0, Color32::WHITE));
+    painter.circle_stroke(center, radius * 0.23, Stroke::new(0.5, Color32::from_rgb(200, 210, 225)));
+
+    // 6. Center spindle hole (deep black hole)
+    painter.circle_filled(center, radius * 0.13, Color32::BLACK);
+    painter.circle_stroke(center, radius * 0.13, Stroke::new(1.0, Color32::from_rgb(230, 235, 245)));
+}
+
+/// A perfectly uniform 1996 catalog navigation tile (92px wide, 28px tall).
+pub fn nav_button(ui: &mut Ui, label: &str, is_active: bool, width: f32, height: f32) -> Response {
+    let (rect, response) = ui.allocate_exact_size(vec2(width, height), Sense::click());
+    let painter = ui.painter();
+
+    let (bg, text_color) = if is_active {
+        (PRIMARY, ON_PRIMARY)
+    } else if response.is_pointer_button_down_on() {
+        (Color32::from_rgb(0xd8, 0xd8, 0xd8), INK_BLACK)
+    } else if response.hovered() {
+        (Color32::from_rgb(0xf2, 0xf2, 0xf2), INK_BLACK)
+    } else {
+        (Color32::WHITE, INK_BLACK)
+    };
+
+    painter.rect_filled(rect, CornerRadius::ZERO, bg);
+    painter.rect_stroke(rect, CornerRadius::ZERO, Stroke::new(1.0, FRAME_INK), egui::StrokeKind::Inside);
+
+    let offset = if response.is_pointer_button_down_on() { vec2(1.0, 1.0) } else { vec2(0.0, 0.0) };
+    painter.text(
+        rect.center() + offset,
+        Align2::CENTER_CENTER,
+        label.to_uppercase(),
+        fonts::button(),
+        text_color,
+    );
+
+    response
+}
+
+/// Crisp table header for track listings.
+pub fn track_table_header(ui: &mut Ui) {
+    let width = ui.available_width();
+    let height = 24.0;
+    let (rect, _) = ui.allocate_exact_size(vec2(width, height), Sense::hover());
+    let painter = ui.painter();
+    painter.rect_filled(rect, CornerRadius::ZERO, Color32::from_rgb(0x14, 0x14, 0x14));
+    painter.line_segment([rect.left_top(), rect.right_top()], Stroke::new(1.0, Color32::from_rgb(0x33, 0x33, 0x33)));
+    painter.line_segment([rect.left_bottom(), rect.right_bottom()], Stroke::new(1.0, Color32::from_rgb(0x33, 0x33, 0x33)));
+
+    painter.text(pos2(rect.min.x + 8.0, rect.center().y), Align2::LEFT_CENTER, "#", fonts::caption(), INK_MUTED);
+    painter.text(pos2(rect.min.x + 36.0, rect.center().y), Align2::LEFT_CENTER, "TITLE", fonts::caption(), INK_MUTED);
+    painter.text(pos2(rect.min.x + width * 0.44, rect.center().y), Align2::LEFT_CENTER, "ARTIST", fonts::caption(), INK_MUTED);
+    painter.text(pos2(rect.min.x + width * 0.70, rect.center().y), Align2::LEFT_CENTER, "ALBUM", fonts::caption(), INK_MUTED);
+    painter.text(pos2(rect.max.x - SPACING_MD, rect.center().y), Align2::RIGHT_CENTER, "TIME", fonts::caption(), INK_MUTED);
+}
+
+/// Track list data table row with clipped columns.
 pub fn track_row(
     ui: &mut Ui,
     number: usize,
@@ -364,48 +454,57 @@ pub fn track_row(
     // 1px bottom border
     painter.line_segment(
         [pos2(rect.min.x, rect.max.y), pos2(rect.max.x, rect.max.y)],
-        Stroke::new(1.0, Color32::from_rgb(0x30, 0x30, 0x30)),
+        Stroke::new(1.0, Color32::from_rgb(0x28, 0x28, 0x28)),
     );
 
     let text_color = if is_playing { PRIMARY } else { INK };
 
-    // Track number
+    // Track number (fixed 2 digits)
     painter.text(
-        pos2(rect.min.x + SPACING_SM, rect.center().y),
+        pos2(rect.min.x + 8.0, rect.center().y),
         Align2::LEFT_CENTER,
         format!("{:02}", number),
         fonts::caption(),
-        INK_MUTED,
+        if is_playing { PRIMARY } else { INK_MUTED },
     );
 
-    // Title
-    painter.text(
-        pos2(rect.min.x + 40.0, rect.center().y),
+    // Title (clipped from col 36px to 44%)
+    let title_max_w = (width * 0.44 - 44.0).max(40.0);
+    let title_rect = Rect::from_min_size(pos2(rect.min.x + 36.0, rect.min.y), vec2(title_max_w, height));
+    let title_clipped = painter.with_clip_rect(title_rect);
+    title_clipped.text(
+        pos2(title_rect.min.x, title_rect.center().y),
         Align2::LEFT_CENTER,
         title,
         fonts::body_sm(),
         text_color,
     );
 
-    // Artist
-    painter.text(
-        pos2(rect.min.x + width * 0.45, rect.center().y),
+    // Artist (clipped from 44% to 70%)
+    let artist_max_w = (width * 0.26 - 12.0).max(40.0);
+    let artist_rect = Rect::from_min_size(pos2(rect.min.x + width * 0.44, rect.min.y), vec2(artist_max_w, height));
+    let artist_clipped = painter.with_clip_rect(artist_rect);
+    artist_clipped.text(
+        pos2(artist_rect.min.x, artist_rect.center().y),
         Align2::LEFT_CENTER,
         artist,
         fonts::body_sm(),
         INK_MUTED,
     );
 
-    // Album
-    painter.text(
-        pos2(rect.min.x + width * 0.72, rect.center().y),
+    // Album (clipped from 70% to end - 65px)
+    let album_max_w = (width * 0.28 - 75.0).max(30.0);
+    let album_rect = Rect::from_min_size(pos2(rect.min.x + width * 0.70, rect.min.y), vec2(album_max_w, height));
+    let album_clipped = painter.with_clip_rect(album_rect);
+    album_clipped.text(
+        pos2(album_rect.min.x, album_rect.center().y),
         Align2::LEFT_CENTER,
         album,
         fonts::body_sm(),
         INK_MUTED,
     );
 
-    // Duration
+    // Duration (right aligned)
     painter.text(
         pos2(rect.max.x - SPACING_MD, rect.center().y),
         Align2::RIGHT_CENTER,

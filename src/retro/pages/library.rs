@@ -116,6 +116,8 @@ pub fn show(app: &mut App, ui: &mut Ui, tab: LibraryTab) {
             if items.is_empty() {
                 ui.label(egui::RichText::new("No liked tracks in library yet.").font(fonts::body()).color(INK_MUTED));
             } else {
+                primitives::track_table_header(ui);
+                ui.add_space(2.0);
                 for (idx, song) in items.iter().take(50).enumerate() {
                     let is_current = app.now_playing().as_ref().map(|n| n.uri.as_str()) == Some(song.track.uri.as_str());
                     let duration = format_duration(song.track.duration_ms);

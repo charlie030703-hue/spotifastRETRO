@@ -232,74 +232,85 @@ fn mix(a: [f32; 3], b: [f32; 3], t: f32) -> [f32; 3] {
     ]
 }
 
-/// How far `p` is from the triangle `a`, `b`, `c`: zero inside it.
-fn triangle_distance(p: (f32, f32), a: (f32, f32), b: (f32, f32), c: (f32, f32)) -> f32 {
-    let edge = |a: (f32, f32), b: (f32, f32)| {
-        let (ex, ey) = (b.0 - a.0, b.1 - a.1);
-        let (px, py) = (p.0 - a.0, p.1 - a.1);
-        let along = ((px * ex + py * ey) / (ex * ex + ey * ey)).clamp(0.0, 1.0);
-        let (dx, dy) = (px - ex * along, py - ey * along);
-        ((dx * dx + dy * dy).sqrt(), ex * py - ey * px)
-    };
-    let (d1, s1) = edge(a, b);
-    let (d2, s2) = edge(b, c);
-    let (d3, s3) = edge(c, a);
-    let inside = (s1 >= 0.0 && s2 >= 0.0 && s3 >= 0.0) || (s1 <= 0.0 && s2 <= 0.0 && s3 <= 0.0);
-    if inside { 0.0 } else { d1.min(d2).min(d3) }
-}
 
 /// The mark on a 128-unit square, as `packaging/icons/spotifast.svg` draws
 /// it: a disc of radius 62 and a play triangle with corners rounded by 5,
 /// set a little left of its box so it looks centred. `polished` adds the
 /// darker rim, the lit face and the bright edge between them.
-fn mark_rgba(size: usize, polished: bool) -> Vec<u8> {
-    const GREEN: [f32; 3] = [30.0, 215.0, 96.0];
-    const INK: [f32; 3] = [11.0, 14.0, 12.0];
+fn mark_rgba(size: usize, _polished: bool) -> Vec<u8> {
     let mut rgba = vec![0u8; size * size * 4];
-    // The disc keeps two pixels of margin, so its edge is never clipped.
     let unit = (size as f32 / 2.0 - 2.0) / 62.0;
     let origin = size as f32 / 2.0 - 64.0 * unit;
     for y in 0..size {
         for x in 0..size {
-            // The pixel's centre in the mark's own units.
             let u = (x as f32 + 0.5 - origin) / unit;
             let v = (y as f32 + 0.5 - origin) / unit;
-            let distance = ((u - 64.0).powi(2) + (v - 64.0).powi(2)).sqrt();
-            let coverage = ((62.0 - distance) * unit + 0.5).clamp(0.0, 1.0);
-            if coverage <= 0.0 {
+            let dx = u - 64.0;
+            let dy = v - 64.0;
+            let distance = (dx * dx + dy * dy).sqrt();
+
+            // 1. Outside disc
+            if distance > 62.0 {
                 continue;
             }
-            let mut colour = if polished {
-                let rim = mix([24.0, 192.0, 85.0], [12.0, 138.0, 58.0], (v - 2.0) / 124.0);
-                let lit = (v - 8.0) / 112.0;
-                let face = if lit < 0.55 {
-                    mix([92.0, 240.0, 149.0], GREEN, lit / 0.55)
-                } else {
-                    mix(GREEN, [21.0, 182.0, 80.0], (lit - 0.55) / 0.45)
-                };
-                let on_face = ((54.4 - distance) * unit + 0.5).clamp(0.0, 1.0);
-                let mut colour = mix(rim, face, on_face);
-                // The bright edge where the face meets the rim: light at
-                // the top, shaded at the bottom.
-                let edge = (1.0 - (distance - 55.0).abs() / 0.9).clamp(0.0, 1.0);
-                let (tone, strength) = if lit < 0.5 {
-                    ([217.0, 255.0, 232.0], 1.0 - 1.3 * lit)
-                } else {
-                    ([10.0, 110.0, 46.0], 0.35 + 1.1 * (lit - 0.5))
-                };
-                colour = mix(colour, tone, edge * strength.clamp(0.0, 1.0));
-                colour
+
+            // 2. Center spindle hole (transparent)
+            if distance < 7.5 {
+                continue;
+            }
+
+            let theta = dy.atan2(dx);
+            let (colour, alpha) = if distance < 8.5 {
+                // Inner spindle hole beveled rim
+                let hole_cov = ((distance - 7.5) * unit).clamp(0.0, 1.0);
+                ([235.0, 240.0, 245.0], hole_cov * 0.95)
+            } else if distance < 20.0 {
+                // Clear plastic clamping ring with circular ridge at 15.0
+                let ridge = (1.0 - (distance - 15.0).abs() / 0.9).clamp(0.0, 1.0);
+                let col = [230.0 + ridge * 25.0, 235.0 + ridge * 20.0, 240.0 + ridge * 15.0];
+                (col, 0.55 + ridge * 0.35)
+            } else if distance < 23.0 {
+                // Mirror lead-in band
+                let mirror_shine = 0.88 + 0.12 * (theta * 2.0).cos();
+                ([225.0 * mirror_shine, 232.0 * mirror_shine, 242.0 * mirror_shine], 1.0)
             } else {
-                GREEN
+                // Aluminum recording data surface with iridescent rainbow diffraction
+                let rainbow_phase = theta * 2.0 + distance * 0.06;
+                let r = ((rainbow_phase).sin() * 0.5 + 0.5).powf(1.4);
+                let g = ((rainbow_phase + 2.094).sin() * 0.5 + 0.5).powf(1.4);
+                let b = ((rainbow_phase + 4.189).sin() * 0.5 + 0.5).powf(1.4);
+
+                let radial_fan = (2.0 * theta).sin().abs().powf(2.5) * 0.65
+                    + (2.0 * theta + 1.2).cos().abs().powf(3.0) * 0.45;
+                let track_groove = (distance * 14.0).sin() * 0.03 + 0.97;
+
+                let base_silver = [215.0 * track_groove, 222.0 * track_groove, 230.0 * track_groove];
+                let rainbow_col = [r * 255.0, g * 255.0, b * 255.0];
+
+                let mut col = mix(base_silver, rainbow_col, radial_fan * 0.72);
+
+                // Specular light reflection arc
+                let glint = (theta - 0.785).cos().abs().powf(14.0) * 45.0;
+                col[0] = (col[0] + glint).min(255.0);
+                col[1] = (col[1] + glint).min(255.0);
+                col[2] = (col[2] + glint).min(255.0);
+
+                if distance > 59.0 {
+                    // Outer clear polycarbonate bevel rim
+                    let rim_cov = ((62.0 - distance) * unit + 0.5).clamp(0.0, 1.0);
+                    let edge = (1.0 - (distance - 60.8).abs()).clamp(0.0, 1.0);
+                    col = mix(col, [245.0, 248.0, 255.0], edge * 0.5);
+                    (col, rim_cov)
+                } else {
+                    (col, 1.0)
+                }
             };
-            let triangle = triangle_distance((u, v), (49.2, 43.5), (49.2, 84.5), (86.1, 64.0));
-            let glyph = ((5.0 - triangle) * unit + 0.5).clamp(0.0, 1.0);
-            colour = mix(colour, INK, glyph);
+
             let index = (y * size + x) * 4;
-            rgba[index] = colour[0].round() as u8;
-            rgba[index + 1] = colour[1].round() as u8;
-            rgba[index + 2] = colour[2].round() as u8;
-            rgba[index + 3] = (coverage * 255.0) as u8;
+            rgba[index] = colour[0].clamp(0.0, 255.0).round() as u8;
+            rgba[index + 1] = colour[1].clamp(0.0, 255.0).round() as u8;
+            rgba[index + 2] = colour[2].clamp(0.0, 255.0).round() as u8;
+            rgba[index + 3] = (alpha.clamp(0.0, 1.0) * 255.0) as u8;
         }
     }
     rgba

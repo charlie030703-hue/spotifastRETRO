@@ -81,6 +81,8 @@ pub fn show(app: &mut App, ui: &mut Ui) {
     if let Some(tracks) = results.tracks.as_ref().filter(|t| !t.items.is_empty()) {
         ui.label(egui::RichText::new("TRACK MATCHES").font(fonts::heading_3()).color(INK));
         ui.add_space(SPACING_S);
+        primitives::track_table_header(ui);
+        ui.add_space(2.0);
 
         for (idx, track) in tracks.items.iter().take(15).enumerate() {
             let is_playing = app.now_playing().as_ref().map(|n| n.uri.as_str()) == Some(track.uri.as_str());

@@ -49,9 +49,11 @@ pub fn show(app: &mut App, ui: &mut Ui, rect: Rect) {
     );
     ui.painter().rect_stroke(cover_rect, CornerRadius::ZERO, Stroke::new(1.0, FRAME_INK), egui::StrokeKind::Inside);
 
-    // Title and artist text
+    // Title and artist text (clipped so they never overlap the center)
+    let max_text_w = 210.0;
     let title_pos = pos2(cover_rect.max.x + SPACING_M, left_rect.min.y + 8.0);
-    ui.painter().text(
+    let title_clip = ui.painter().with_clip_rect(Rect::from_min_size(title_pos, vec2(max_text_w, 18.0)));
+    title_clip.text(
         title_pos,
         Align2::LEFT_TOP,
         title.to_uppercase(),
@@ -60,7 +62,8 @@ pub fn show(app: &mut App, ui: &mut Ui, rect: Rect) {
     );
 
     let artist_pos = pos2(cover_rect.max.x + SPACING_M, left_rect.min.y + 26.0);
-    ui.painter().text(
+    let artist_clip = ui.painter().with_clip_rect(Rect::from_min_size(artist_pos, vec2(max_text_w, 16.0)));
+    artist_clip.text(
         artist_pos,
         Align2::LEFT_TOP,
         artist,
@@ -82,18 +85,18 @@ pub fn show(app: &mut App, ui: &mut Ui, rect: Rect) {
     );
 
     center_ui.horizontal(|ui| {
-        if primitives::button_secondary(ui, "|<").clicked() {
+        ui.spacing_mut().item_spacing.x = 6.0;
+
+        if primitives::nav_button(ui, "|<", false, 36.0, 24.0).clicked() {
             app.actions.push(Action::Previous);
         }
-        ui.add_space(SPACING_S);
 
         let play_label = if is_playing { "|| PAUSE" } else { "> PLAY" };
-        if primitives::button_primary(ui, play_label).clicked() {
+        if primitives::nav_button(ui, play_label, is_playing, 76.0, 24.0).clicked() {
             app.actions.push(Action::TogglePlay);
         }
-        ui.add_space(SPACING_S);
 
-        if primitives::button_secondary(ui, ">|").clicked() {
+        if primitives::nav_button(ui, ">|", false, 36.0, 24.0).clicked() {
             app.actions.push(Action::Next);
         }
     });

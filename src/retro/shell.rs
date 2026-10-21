@@ -64,14 +64,27 @@ pub fn show(app: &mut App, ui: &mut Ui) {
 }
 
 fn render_top_banner(app: &mut App, ui: &mut Ui, rect: Rect) {
+    let now = app.now_playing();
+    let is_playing = now.as_ref().map_or(false, |n| n.playing);
+    let (pos_ms, dur_ms) = now.as_ref().map_or((0, 0), |n| (n.position_ms, n.duration_ms));
+
     {
         let painter = ui.painter();
         painter.rect_filled(rect, CornerRadius::ZERO, FRAME_INK);
         painter.line_segment([rect.left_bottom(), rect.right_bottom()], Stroke::new(1.0, BEVEL_HIGHLIGHT));
 
+        // 1. Spinning Holographic Compact Disc (CD) Icon
+        let cd_center = pos2(rect.min.x + 24.0, rect.center().y);
+        let cd_angle = if is_playing {
+            (pos_ms as f32) * 0.003
+        } else {
+            0.0
+        };
+        primitives::draw_cd(&painter, cd_center, 11.5, cd_angle);
+
         // Wordmark: SPOTIFAST RETRO
         painter.text(
-            pos2(rect.min.x + SPACING_LG, rect.center().y),
+            pos2(rect.min.x + 44.0, rect.center().y),
             Align2::LEFT_CENTER,
             "SPOTIFAST RETRO",
             fonts::heading_1(),
@@ -79,34 +92,37 @@ fn render_top_banner(app: &mut App, ui: &mut Ui, rect: Rect) {
         );
 
         // Tagline in Helvetica caps
-        painter.text(
-            pos2(rect.min.x + 230.0, rect.center().y + 1.0),
-            Align2::LEFT_CENTER,
-            "BUILD YOUR OWN PLAYLIST. ONLINE.",
-            fonts::button(),
-            INK_MUTED,
-        );
+        if rect.width() > 700.0 {
+            painter.text(
+                pos2(rect.min.x + 238.0, rect.center().y + 1.0),
+                Align2::LEFT_CENTER,
+                "BUILD YOUR OWN PLAYLIST. ONLINE.",
+                fonts::button(),
+                INK_MUTED,
+            );
+        }
     }
 
     // Center/Right: "PLAY a RECORD" yellow button
-    let sticker_rect = Rect::from_center_size(pos2(rect.center().x + 60.0, rect.center().y), vec2(110.0, 26.0));
-    let mut sticker_ui = ui.new_child(egui::UiBuilder::new().max_rect(sticker_rect));
-    if play_a_record_sticker(&mut sticker_ui).clicked() {
-        app.actions.push(Action::Open(Page::Search));
+    if rect.width() > 800.0 {
+        let sticker_rect = Rect::from_center_size(pos2(rect.center().x + 50.0, rect.center().y), vec2(110.0, 26.0));
+        let mut sticker_ui = ui.new_child(egui::UiBuilder::new().max_rect(sticker_rect));
+        if play_a_record_sticker(&mut sticker_ui).clicked() {
+            app.actions.push(Action::Open(Page::Search));
+        }
     }
 
     // Elapsed / Total Time Readout in Dell Red (#e91d2a)
-    let now = app.now_playing();
-    let (pos_ms, dur_ms) = now.as_ref().map_or((0, 0), |n| (n.position_ms, n.duration_ms));
     let time_str = if dur_ms > 0 {
         format!("{}:{:02} / {}:{:02}", pos_ms / 60000, (pos_ms % 60000) / 1000, dur_ms / 60000, (dur_ms % 60000) / 1000)
     } else {
         "1-800-SPOTIFAST".into()
     };
 
-    let time_rect = Rect::from_min_size(pos2(rect.max.x - 280.0, rect.min.y + 10.0), vec2(150.0, 24.0));
+    let time_rect = Rect::from_min_size(pos2(rect.max.x - 260.0, rect.min.y + 10.0), vec2(146.0, 24.0));
     let painter = ui.painter();
     painter.rect_filled(time_rect, CornerRadius::ZERO, FRAME_INK);
+    painter.rect_stroke(time_rect, CornerRadius::ZERO, Stroke::new(1.0, egui::Color32::from_rgb(0x33, 0x33, 0x33)), egui::StrokeKind::Inside);
     painter.text(
         pos2(time_rect.center().x, time_rect.center().y),
         Align2::CENTER_CENTER,
@@ -115,24 +131,23 @@ fn render_top_banner(app: &mut App, ui: &mut Ui, rect: Rect) {
         PRIMARY,
     );
 
-    // Window Caption Controls
-    let controls_rect = Rect::from_min_size(pos2(rect.max.x - 110.0, rect.min.y + 8.0), vec2(100.0, 28.0));
+    // Window Caption Controls (fixed uniform buttons)
+    let controls_rect = Rect::from_min_size(pos2(rect.max.x - 96.0, rect.min.y + 10.0), vec2(88.0, 24.0));
     let mut controls_ui = ui.new_child(egui::UiBuilder::new().max_rect(controls_rect));
     render_caption_buttons(app, &mut controls_ui);
 }
 
 fn render_caption_buttons(app: &mut App, ui: &mut Ui) {
     ui.horizontal(|ui| {
-        if primitives::button_secondary(ui, "_").clicked() {
+        ui.spacing_mut().item_spacing.x = 3.0;
+        if primitives::nav_button(ui, "_", false, 24.0, 22.0).clicked() {
             ui.ctx().send_viewport_cmd(egui::ViewportCommand::Minimized(true));
         }
-        ui.add_space(2.0);
-        if primitives::button_secondary(ui, "[]").clicked() {
+        if primitives::nav_button(ui, "[]", false, 24.0, 22.0).clicked() {
             let maxed = ui.input(|i| i.viewport().maximized.unwrap_or(false));
             ui.ctx().send_viewport_cmd(egui::ViewportCommand::Maximized(!maxed));
         }
-        ui.add_space(2.0);
-        if primitives::button_primary(ui, "X").clicked() {
+        if primitives::nav_button(ui, "X", true, 26.0, 22.0).clicked() {
             app.actions.push(Action::CloseWindow);
         }
     });
@@ -145,50 +160,45 @@ fn render_left_rail(app: &mut App, ui: &mut Ui, rect: Rect) {
 
     let mut rail_ui = ui.new_child(
         egui::UiBuilder::new()
-            .max_rect(rect.shrink2(vec2(SPACING_MD, SPACING_MD)))
+            .max_rect(rect.shrink2(vec2(12.0, SPACING_MD)))
             .layout(egui::Layout::top_down(Align::Center)),
     );
 
-    // 2x4 Navigation Tile Grid
+    // 2x4 Navigation Tile Grid (uniformly 92px wide x 28px high)
     let grid_items = [
         ("HOME", Page::Home),
         ("FIND", Page::Search),
         ("ALBUMS", Page::Albums),
         ("LIKED", Page::LikedSongs),
         ("QUEUE", Page::Queue),
-        ("LYRICS", Page::TopSongs), // Links to Now Playing / Lyrics hero
+        ("NOW PLAYING", Page::TopSongs),
     ];
 
     for chunk in grid_items.chunks(2) {
         rail_ui.horizontal(|ui| {
+            ui.spacing_mut().item_spacing.x = 6.0;
             for (label, target_page) in chunk {
                 let is_active = app.page() == target_page;
-                let btn = if is_active {
-                    primitives::button_primary(ui, label)
-                } else {
-                    primitives::button_secondary(ui, label)
-                };
-                if btn.clicked() {
+                if primitives::nav_button(ui, label, is_active, 91.0, 28.0).clicked() {
                     app.actions.push(Action::Open(target_page.clone()));
                 }
-                ui.add_space(SPACING_XS);
             }
         });
-        rail_ui.add_space(SPACING_S);
+        rail_ui.add_space(5.0);
     }
 
-    // Hardware & Visuals Actions
+    // Hardware & Winamp Actions
     rail_ui.horizontal(|ui| {
-        if primitives::button_secondary(ui, "DEVICES").clicked() {
+        ui.spacing_mut().item_spacing.x = 6.0;
+        if primitives::nav_button(ui, "DEVICES", false, 91.0, 26.0).clicked() {
             app.actions.push(Action::RefreshDevices);
         }
-        ui.add_space(SPACING_XS);
-        if primitives::button_secondary(ui, "WINAMP").clicked() {
+        if primitives::nav_button(ui, "WINAMP", false, 91.0, 26.0).clicked() {
             app.actions.push(Action::ToggleWinampWindow);
         }
     });
 
-    rail_ui.add_space(SPACING_LG);
+    rail_ui.add_space(SPACING_MD);
 
     // Prominent Now Playing Album Art in Left Rail
     let now = app.now_playing();

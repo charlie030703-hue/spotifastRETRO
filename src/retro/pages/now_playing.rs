@@ -56,23 +56,39 @@ pub fn show(app: &mut App, ui: &mut Ui) {
 
     ui.add_space(SPACING_LG);
 
-    // 2. Large Central Artwork Hero
+    // 2. Large Central Artwork Hero with Spinning CD Disc
     ui.vertical_centered(|ui| {
-        let hero_size = 340.0;
+        let hero_size = 310.0;
         let art_loader = app.backend.art();
-        let art_rect = bevel_art(
-            ui,
-            &app.palette,
-            cover_url.as_deref(),
-            hero_size,
-            Icon::Disc,
-            Some(art_loader),
-        );
 
-        // Optional "NEW!" burst sticker on recent releases
-        if is_playing {
-            primitives::new_burst_sticker(ui, pos2(art_rect.max.x - 16.0, art_rect.min.y + 16.0));
-        }
+        ui.horizontal(|ui| {
+            ui.add_space((ui.available_width() - (hero_size + 140.0)).max(0.0) / 2.0);
+
+            // Album cover sleeve
+            let art_rect = bevel_art(
+                ui,
+                &app.palette,
+                cover_url.as_deref(),
+                hero_size,
+                Icon::Disc,
+                Some(art_loader),
+            );
+
+            // Spinning Compact Disc partially peeking out from the right of the sleeve!
+            let cd_center = pos2(art_rect.max.x + 40.0, art_rect.center().y);
+            let cd_radius = hero_size * 0.44;
+            let cd_angle = if is_playing {
+                (position_ms as f32) * 0.003
+            } else {
+                0.0
+            };
+            primitives::draw_cd(ui.painter(), cd_center, cd_radius, cd_angle);
+
+            // Optional "NEW!" burst sticker on recent releases
+            if is_playing {
+                primitives::new_burst_sticker(ui, pos2(art_rect.max.x - 16.0, art_rect.min.y + 16.0));
+            }
+        });
 
         ui.add_space(SPACING_XL);
 
@@ -108,7 +124,7 @@ pub fn show(app: &mut App, ui: &mut Ui) {
                 let pos_str = format_ms(position_ms);
                 let dur_str = format_ms(duration_ms);
                 ui.label(
-                    egui::RichText::new(format!("POSITION: {pos_str} OF {dur_str} (CATALOG #SP-1996)"))
+                    egui::RichText::new(format!("POSITION: {pos_str} OF {dur_str} (COMPACT DISC AUDIO // 44.1 kHz)"))
                         .font(fonts::caption())
                         .color(INK_BLACK),
                 );
@@ -119,9 +135,9 @@ pub fn show(app: &mut App, ui: &mut Ui) {
 
         // 4. The singular Dell Red CTA block
         let (cta_title, cta_subtitle) = if is_playing {
-            ("PAUSE RECORD PLAYBACK", "Halt turntable spinning at current groove")
+            ("PAUSE RECORD PLAYBACK", "Halt compact disc laser pickup at current track")
         } else {
-            ("ENGAGE NEEDLE // PLAY RECORD", "Commence laser pickup playback through sound card")
+            ("SPIN COMPACT DISC // PLAY", "Commence 16-bit digital playback through sound card")
         };
 
         if cta_block_red(ui, cta_title, cta_subtitle).clicked() {
@@ -130,31 +146,31 @@ pub fn show(app: &mut App, ui: &mut Ui) {
 
         ui.add_space(SPACING_LG);
 
-        // 5. Chunky 1996 Transport Button Row
+        // 5. Chunky 1996 Transport Button Row (centered, perfectly uniform)
         ui.horizontal(|ui| {
-            ui.add_space((ui.available_width() - 360.0).max(0.0) / 2.0);
+            ui.add_space((ui.available_width() - 410.0).max(0.0) / 2.0);
+            ui.spacing_mut().item_spacing.x = 8.0;
 
-            if primitives::button_secondary(ui, "<< PREV").clicked() {
+            if primitives::nav_button(ui, "|< PREV", false, 74.0, 28.0).clicked() {
                 app.actions.push(Action::Previous);
             }
-            ui.add_space(SPACING_M);
 
-            if primitives::button_primary(ui, if is_playing { "PAUSE" } else { "PLAY" }).clicked() {
+            let play_label = if is_playing { "|| PAUSE" } else { "> PLAY" };
+            if primitives::nav_button(ui, play_label, is_playing, 78.0, 28.0).clicked() {
                 app.actions.push(Action::TogglePlay);
             }
-            ui.add_space(SPACING_M);
 
-            if primitives::button_secondary(ui, "NEXT >>").clicked() {
+            if primitives::nav_button(ui, "NEXT >|", false, 74.0, 28.0).clicked() {
                 app.actions.push(Action::Next);
             }
-            ui.add_space(SPACING_M);
 
-            if primitives::button_secondary(ui, "SHUFFLE").clicked() {
+            let shuffle_active = now.as_ref().map_or(false, |n| n.shuffle);
+            if primitives::nav_button(ui, "SHUFFLE", shuffle_active, 78.0, 28.0).clicked() {
                 app.actions.push(Action::ToggleShuffle);
             }
-            ui.add_space(SPACING_M);
 
-            if primitives::button_secondary(ui, "REPEAT").clicked() {
+            let repeat_active = now.as_ref().map_or(false, |n| n.repeat != crate::player::RepeatMode::Off);
+            if primitives::nav_button(ui, "REPEAT", repeat_active, 74.0, 28.0).clicked() {
                 app.actions.push(Action::CycleRepeat);
             }
         });
