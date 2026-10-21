@@ -8,10 +8,9 @@
 //! - Dell Red strictly limited to the CTA play block and top banner time readout
 
 use egui::{
-    pos2, vec2, Align2, Color32, CornerRadius, FontFamily, FontId, Pos2, Rect,
+    pos2, vec2, Align2, Color32, CornerRadius, Pos2, Rect,
     Response, Sense, Stroke, Ui, Vec2,
 };
-use std::sync::Arc;
 
 use super::fonts;
 use super::tokens::*;
@@ -44,7 +43,7 @@ pub fn section_eyebrow(ui: &mut Ui, tint: CatalogTint, title: &str) -> Rect {
         pos2(rect.min.x + SPACING_LG, rect.center().y),
         Align2::LEFT_CENTER,
         title.to_uppercase(),
-        FontId::new(22.0, FontFamily::Name(Arc::from(fonts::FAMILY_DISPLAY))),
+        fonts::heading_1(),
         INK_BLACK,
     );
 
