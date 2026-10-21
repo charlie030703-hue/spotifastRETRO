@@ -1,5 +1,12 @@
 # Spotifast agent guide
 
+> **SpotifastRETRO fork.** Read `FORK.md` first. The fork owner has approved
+> the Dell 1996 interface redesign and owns its settings and dependencies, so
+> the upstream rules below that require crmne's approval (new settings,
+> interface redesigns, dependency sources, visual review evidence, release and
+> issue procedures) do not gate work in this fork. Product boundaries,
+> architecture rules and the definition of done still apply.
+
 Follow `CONTRIBUTING.md`; it is the canonical product and contribution policy.
 These instructions add implementation constraints for coding agents.
 
