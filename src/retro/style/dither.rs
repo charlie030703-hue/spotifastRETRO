@@ -50,8 +50,20 @@ pub fn dither_rgba(width: usize, height: usize, rgba: &mut [u8]) {
 /// Applies Bayer 4x4 web-safe dithering to an egui::ColorImage in-place.
 pub fn dither_color_image(image: &mut egui::ColorImage) {
     let [width, height] = image.size;
-    let pixels = bytemuck::cast_slice_mut(&mut image.pixels);
-    dither_rgba(width, height, pixels);
+    for y in 0..height {
+        let my = y % 4;
+        let row_offset = y * width;
+        for x in 0..width {
+            let mx = x % 4;
+            let threshold = BAYER_4X4[my][mx] - 8;
+            let dither_offset = threshold * 3;
+            let p = &mut image.pixels[row_offset + x];
+            let r = quantize_channel(p.r() as i32 + dither_offset);
+            let g = quantize_channel(p.g() as i32 + dither_offset);
+            let b = quantize_channel(p.b() as i32 + dither_offset);
+            *p = egui::Color32::from_rgba_premultiplied(r, g, b, p.a());
+        }
+    }
 }
 
 #[cfg(test)]

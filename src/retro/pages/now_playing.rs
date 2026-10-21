@@ -7,7 +7,7 @@
 //! - The screen's singular Dell Red CTA panel ("PLAY / PAUSE RECORD")
 //! - Authentic 1996 transport controls and segmented track progress
 
-use egui::{pos2, vec2, Align, Align2, Color32, CornerRadius, Layout, Rect, Sense, Stroke, Ui, Vec2};
+use egui::{pos2, vec2, Color32, CornerRadius, Rect, Sense, Stroke, Ui};
 
 use crate::app::App;
 use crate::model::{Action, Page};
@@ -44,7 +44,7 @@ pub fn show(app: &mut App, ui: &mut Ui) {
 
     // Calculate catalogue tint from album artwork
     let palette_colors = app.now_playing_palette();
-    let current_tint = tint::snap_artwork(&palette_colors, cover_url.as_deref());
+    let current_tint = tint::snap_artwork(palette_colors.unwrap_or(&[]), cover_url.as_deref());
 
     // 1. Eyebrow Banner
     let eyebrow_text = if is_playing {
@@ -89,7 +89,7 @@ pub fn show(app: &mut App, ui: &mut Ui) {
                     ui.label(egui::RichText::new("ARTIST: ").font(fonts::button()).color(INK_BLACK));
                     if text_link(ui, &artist, true).clicked() {
                         if let Some(now) = now.as_ref() {
-                            if let Some(artist_id) = &now.artist_id {
+                            if let Some(artist_id) = now.artists.first().and_then(|a| a.id.as_ref()) {
                                 app.actions.push(Action::Open(Page::Artist(artist_id.clone())));
                             }
                         }
@@ -167,9 +167,9 @@ pub fn show(app: &mut App, ui: &mut Ui) {
 }
 
 fn paint_segmented_progress(ui: &mut Ui, position_ms: u32, duration_ms: u32) {
-    let width = 460.0.min(ui.available_width() - 40.0);
+    let width = 460.0_f32.min(ui.available_width() - 40.0);
     let height = 18.0;
-    let (rect, response) = ui.allocate_exact_size(vec2(width, height), Sense::click_and_drag());
+    let (rect, _response) = ui.allocate_exact_size(vec2(width, height), Sense::click_and_drag());
     let painter = ui.painter();
 
     // Background container with 1px border

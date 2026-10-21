@@ -6,24 +6,21 @@
 //! - Center: Square transport buttons (PREV, PLAY/PAUSE, NEXT) and segmented track progress
 //! - Right: Chunky master volume fader and output mode
 
-use egui::{pos2, vec2, Align, Align2, Color32, CornerRadius, Rect, Sense, Stroke, Ui, Vec2};
+use egui::{pos2, vec2, Align, Align2, Color32, CornerRadius, Rect, Stroke, Ui, Vec2};
 
 use crate::app::App;
-use crate::model::{Action, Page};
+use crate::model::Action;
 use crate::retro::style::{
     fonts,
-    primitives::{self, bevel_art, text_link},
-    tint,
+    primitives,
     tokens::*,
 };
 use crate::theme::Icon;
 
 pub fn show(app: &mut App, ui: &mut Ui, rect: Rect) {
-    let painter = ui.painter();
-
     // Pure black background with 1px top border
-    painter.rect_filled(rect, CornerRadius::ZERO, FRAME_INK);
-    painter.line_segment(
+    ui.painter().rect_filled(rect, CornerRadius::ZERO, FRAME_INK);
+    ui.painter().line_segment(
         [rect.left_top(), rect.right_top()],
         Stroke::new(1.0, BEVEL_HIGHLIGHT),
     );
@@ -50,11 +47,11 @@ pub fn show(app: &mut App, ui: &mut Ui, rect: Rect) {
         Icon::Disc,
         Some(app.backend.art()),
     );
-    painter.rect_stroke(cover_rect, CornerRadius::ZERO, Stroke::new(1.0, FRAME_INK), egui::StrokeKind::Inside);
+    ui.painter().rect_stroke(cover_rect, CornerRadius::ZERO, Stroke::new(1.0, FRAME_INK), egui::StrokeKind::Inside);
 
     // Title and artist text
     let title_pos = pos2(cover_rect.max.x + SPACING_M, left_rect.min.y + 8.0);
-    painter.text(
+    ui.painter().text(
         title_pos,
         Align2::LEFT_TOP,
         title.to_uppercase(),
@@ -63,7 +60,7 @@ pub fn show(app: &mut App, ui: &mut Ui, rect: Rect) {
     );
 
     let artist_pos = pos2(cover_rect.max.x + SPACING_M, left_rect.min.y + 26.0);
-    painter.text(
+    ui.painter().text(
         artist_pos,
         Align2::LEFT_TOP,
         artist,
@@ -72,7 +69,7 @@ pub fn show(app: &mut App, ui: &mut Ui, rect: Rect) {
     );
 
     // ─── 2. Center Section: Transport Controls + Progress ───
-    let center_w = 420.0.min(rect.width() - 560.0).max(240.0);
+    let center_w = 420.0_f32.min(rect.width() - 560.0).max(240.0);
     let center_rect = Rect::from_center_size(
         pos2(rect.center().x, rect.center().y),
         vec2(center_w, 56.0),
@@ -111,13 +108,13 @@ pub fn show(app: &mut App, ui: &mut Ui, rect: Rect) {
         vec2(progress_w, 10.0),
     );
 
-    painter.rect_filled(progress_rect, CornerRadius::ZERO, Color32::from_rgb(0x11, 0x11, 0x11));
-    painter.rect_stroke(progress_rect, CornerRadius::ZERO, Stroke::new(1.0, BEVEL_HIGHLIGHT), egui::StrokeKind::Inside);
+    ui.painter().rect_filled(progress_rect, CornerRadius::ZERO, Color32::from_rgb(0x11, 0x11, 0x11));
+    ui.painter().rect_stroke(progress_rect, CornerRadius::ZERO, Stroke::new(1.0, BEVEL_HIGHLIGHT), egui::StrokeKind::Inside);
 
     if dur_ms > 0 {
         let pct = (pos_ms as f32 / dur_ms as f32).clamp(0.0, 1.0);
         let filled_rect = Rect::from_min_size(progress_rect.min, vec2(progress_w * pct, 10.0));
-        painter.rect_filled(filled_rect, CornerRadius::ZERO, YELLOW_STICKER);
+        ui.painter().rect_filled(filled_rect, CornerRadius::ZERO, YELLOW_STICKER);
     }
 
     // ─── 3. Right Section: Master Volume ───
@@ -134,10 +131,9 @@ pub fn show(app: &mut App, ui: &mut Ui, rect: Rect) {
 
     let mut vol = app.settings.volume as f32;
     right_ui.horizontal(|ui| {
-        let slider = ui.add(
-            egui::Slider::new(&mut vol, 0.0..=100.0)
-                .show_value(false)
-                .desired_width(90.0),
+        let slider = ui.add_sized(
+            [90.0, 18.0],
+            egui::Slider::new(&mut vol, 0.0..=100.0).show_value(false),
         );
         if slider.changed() {
             app.actions.push(Action::SetVolume(vol as u8));

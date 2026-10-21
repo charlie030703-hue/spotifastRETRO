@@ -3,18 +3,16 @@
 //! Organizes user's collection into period-accurate catalog listings
 //! with prominent album art and crisp metadata cards.
 
-use egui::{pos2, vec2, Align, Align2, Color32, CornerRadius, Rect, Sense, Stroke, Ui, Vec2};
+use egui::Ui;
 
 use crate::api::models::{join_names, pick_image};
 use crate::app::App;
 use crate::model::{Action, Page};
 use crate::retro::style::{
     fonts,
-    primitives::{self, bevel_art, ribbon_card, section_eyebrow, text_link},
-    tint,
+    primitives::{self, ribbon_card, section_eyebrow},
     tokens::*,
 };
-use crate::theme::Icon;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum LibraryTab {
@@ -57,6 +55,8 @@ pub fn show(app: &mut App, ui: &mut Ui, tab: LibraryTab) {
                     let art_url = pick_image(&album.images, 200).map(str::to_string);
                     let artists = join_names(album.artists.iter().map(|a| a.name.as_str()));
                     let card_tint = CatalogTint::ALL[idx % CatalogTint::ALL.len()];
+                    let tracks_count = album.total_tracks.unwrap_or(0);
+                    let release = album.release_date.as_deref().unwrap_or("Unknown");
 
                     let (resp, _) = ribbon_card(
                         ui,
@@ -68,7 +68,7 @@ pub fn show(app: &mut App, ui: &mut Ui, tab: LibraryTab) {
                         |ui| {
                             ui.label(egui::RichText::new(format!("ARTIST: {artists}")).font(fonts::body()).color(INK_BLACK));
                             ui.label(
-                                egui::RichText::new(format!("TRACKS: {} // RELEASE: {}", album.total_tracks, album.release_date))
+                                egui::RichText::new(format!("TRACKS: {tracks_count} // RELEASE: {release}"))
                                     .font(fonts::caption())
                                     .color(INK_BLACK),
                             );
@@ -82,22 +82,26 @@ pub fn show(app: &mut App, ui: &mut Ui, tab: LibraryTab) {
             }
         }
         LibraryTab::Playlists => {
-            let playlists = app.sidebar_playlists.clone();
+            let playlists = app.library.playlists.get().cloned().unwrap_or_default();
             if playlists.is_empty() {
                 ui.label(egui::RichText::new("No personal mixtapes found.").font(fonts::body()).color(INK_MUTED));
             } else {
                 for (idx, pl) in playlists.iter().enumerate() {
                     let card_tint = CatalogTint::ALL[idx % CatalogTint::ALL.len()];
+                    let art_url = pick_image(&pl.images, 200).map(str::to_string);
+                    let curator = pl.owner.display_name.as_deref().unwrap_or("Spotify");
+                    let total = pl.track_total();
+
                     let (resp, _) = ribbon_card(
                         ui,
                         &app.palette,
                         card_tint,
                         &pl.name,
-                        None,
+                        art_url.as_deref(),
                         Some(app.backend.art()),
                         |ui| {
-                            ui.label(egui::RichText::new(format!("CURATED BY: {}", pl.owner.display_name)).font(fonts::body()).color(INK_BLACK));
-                            ui.label(egui::RichText::new(format!("TRACKS: {}", pl.tracks.total)).font(fonts::caption()).color(INK_BLACK));
+                            ui.label(egui::RichText::new(format!("CURATED BY: {curator}")).font(fonts::body()).color(INK_BLACK));
+                            ui.label(egui::RichText::new(format!("TRACKS: {total}")).font(fonts::caption()).color(INK_BLACK));
                         },
                     );
 
@@ -108,19 +112,20 @@ pub fn show(app: &mut App, ui: &mut Ui, tab: LibraryTab) {
             }
         }
         LibraryTab::LikedSongs => {
-            // Liked songs list
-            let liked = app.liked_collection();
-            if let Some(col) = liked {
-                let items = col.items.clone();
+            let items = app.library.liked.items.clone();
+            if items.is_empty() {
+                ui.label(egui::RichText::new("No liked tracks in library yet.").font(fonts::body()).color(INK_MUTED));
+            } else {
                 for (idx, song) in items.iter().take(50).enumerate() {
-                    let is_current = app.playing_track_uri().as_deref() == Some(song.track.uri.as_str());
+                    let is_current = app.now_playing().as_ref().map(|n| n.uri.as_str()) == Some(song.track.uri.as_str());
                     let duration = format_duration(song.track.duration_ms);
+                    let album_name = song.track.album.as_ref().map_or("", |a| a.name.as_str());
                     let resp = primitives::track_row(
                         ui,
                         idx + 1,
                         &song.track.name,
                         &join_names(song.track.artists.iter().map(|a| a.name.as_str())),
-                        &song.track.album.name,
+                        album_name,
                         &duration,
                         is_current,
                     );
@@ -133,8 +138,6 @@ pub fn show(app: &mut App, ui: &mut Ui, tab: LibraryTab) {
                         });
                     }
                 }
-            } else {
-                ui.label(egui::RichText::new("Loading favorite tracks...").font(fonts::body()).color(INK_MUTED));
             }
         }
     }

@@ -10,8 +10,7 @@ use crate::app::App;
 use crate::model::{Action, Page};
 use crate::retro::style::{
     fonts,
-    primitives::{ribbon_card, section_eyebrow, text_link},
-    tint,
+    primitives::{ribbon_card, section_eyebrow},
     tokens::*,
 };
 
@@ -25,23 +24,31 @@ pub fn show(app: &mut App, ui: &mut Ui) {
         .iter()
         .take(6)
         .map(|item| {
-            (
-                item.name.clone(),
-                item.artist.clone().unwrap_or_else(|| "Artist".into()),
-                item.image.clone(),
-                item.page.clone(),
-            )
+            let artists = join_names(item.track.artists.iter().map(|a| a.name.as_str()));
+            let img = item
+                .track
+                .album
+                .as_ref()
+                .and_then(|a| pick_image(&a.images, 200))
+                .map(str::to_string);
+            let page = item
+                .track
+                .album
+                .as_ref()
+                .map(|a| Page::Album(a.id.clone()))
+                .unwrap_or(Page::Home);
+            (item.track.name.clone(), artists, img, page)
         })
         .collect();
 
     if recents.is_empty() {
         // Fallback placeholder tiles if recents haven't populated yet
-        let defaults = [
+        let defaults: [(&str, &str, CatalogTint); 3] = [
             ("Featured Mix Vol. 1", "Various Artists", CatalogTint::Salmon),
             ("Stereo Demonstration Disc", "High Fidelity Labs", CatalogTint::Peach),
             ("Top Hits 1996", "Chart Leaders", CatalogTint::Periwinkle),
         ];
-        for (name, artist, tint) in defaults {
+        for &(name, artist, tint) in &defaults {
             ribbon_card(ui, &app.palette, tint, name, None, None, |ui| {
                 ui.label(egui::RichText::new(artist).font(fonts::body()).color(INK_BLACK));
                 ui.label(egui::RichText::new("HIGH QUALITY DIGITAL AUDIO").font(fonts::caption()).color(INK_BLACK));
@@ -74,16 +81,21 @@ pub fn show(app: &mut App, ui: &mut Ui) {
     section_eyebrow(ui, CatalogTint::Salmon, "NEW RELEASES // HOT FROM THE PRESS");
 
     let new_albums: Vec<(String, String, String, Option<String>)> = app
+        .home
         .new_releases
-        .items
-        .iter()
-        .take(4)
-        .map(|album| {
-            let art = pick_image(&album.images, 200).map(str::to_string);
-            let artists = join_names(album.artists.iter().map(|a| a.name.as_str()));
-            (album.name.clone(), artists, album.id.clone(), art)
+        .get()
+        .map(|albums| {
+            albums
+                .iter()
+                .take(4)
+                .map(|album| {
+                    let art = pick_image(&album.images, 200).map(str::to_string);
+                    let artists = join_names(album.artists.iter().map(|a| a.name.as_str()));
+                    (album.name.clone(), artists, album.id.clone(), art)
+                })
+                .collect()
         })
-        .collect();
+        .unwrap_or_default();
 
     if new_albums.is_empty() {
         ribbon_card(ui, &app.palette, CatalogTint::Lime, "Connecting to Spotify Broadcast...", None, None, |ui| {

@@ -5,7 +5,7 @@
 //! prominent album artwork, the central view container, and the footer transport bar.
 
 use egui::{
-    pos2, vec2, Align, Align2, Color32, CornerRadius, Layout, Pos2, Rect, Sense, Stroke, Ui, Vec2,
+    pos2, vec2, Align, Align2, CornerRadius, Rect, Sense, Stroke, Ui,
 };
 
 use crate::app::App;
@@ -64,27 +64,29 @@ pub fn show(app: &mut App, ui: &mut Ui) {
 }
 
 fn render_top_banner(app: &mut App, ui: &mut Ui, rect: Rect) {
-    let painter = ui.painter();
-    painter.rect_filled(rect, CornerRadius::ZERO, FRAME_INK);
-    painter.line_segment([rect.left_bottom(), rect.right_bottom()], Stroke::new(1.0, BEVEL_HIGHLIGHT));
+    {
+        let painter = ui.painter();
+        painter.rect_filled(rect, CornerRadius::ZERO, FRAME_INK);
+        painter.line_segment([rect.left_bottom(), rect.right_bottom()], Stroke::new(1.0, BEVEL_HIGHLIGHT));
 
-    // Wordmark: SPOTIFAST RETRO
-    painter.text(
-        pos2(rect.min.x + SPACING_LG, rect.center().y),
-        Align2::LEFT_CENTER,
-        "SPOTIFAST RETRO",
-        fonts::heading_1(),
-        INK,
-    );
+        // Wordmark: SPOTIFAST RETRO
+        painter.text(
+            pos2(rect.min.x + SPACING_LG, rect.center().y),
+            Align2::LEFT_CENTER,
+            "SPOTIFAST RETRO",
+            fonts::heading_1(),
+            INK,
+        );
 
-    // Tagline in Helvetica caps
-    painter.text(
-        pos2(rect.min.x + 230.0, rect.center().y + 1.0),
-        Align2::LEFT_CENTER,
-        "BUILD YOUR OWN PLAYLIST. ONLINE.",
-        fonts::button(),
-        INK_MUTED,
-    );
+        // Tagline in Helvetica caps
+        painter.text(
+            pos2(rect.min.x + 230.0, rect.center().y + 1.0),
+            Align2::LEFT_CENTER,
+            "BUILD YOUR OWN PLAYLIST. ONLINE.",
+            fonts::button(),
+            INK_MUTED,
+        );
+    }
 
     // Center/Right: "PLAY a RECORD" yellow button
     let sticker_rect = Rect::from_center_size(pos2(rect.center().x + 60.0, rect.center().y), vec2(110.0, 26.0));
@@ -103,6 +105,7 @@ fn render_top_banner(app: &mut App, ui: &mut Ui, rect: Rect) {
     };
 
     let time_rect = Rect::from_min_size(pos2(rect.max.x - 280.0, rect.min.y + 10.0), vec2(150.0, 24.0));
+    let painter = ui.painter();
     painter.rect_filled(time_rect, CornerRadius::ZERO, FRAME_INK);
     painter.text(
         pos2(time_rect.center().x, time_rect.center().y),

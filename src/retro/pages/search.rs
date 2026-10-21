@@ -3,15 +3,14 @@
 //! Provides a period-accurate 1996 search query interface
 //! rendering hits as ribbon cards and track data rows.
 
-use egui::{pos2, vec2, Align, Align2, Color32, CornerRadius, Rect, Sense, Stroke, Ui, Vec2};
+use egui::{vec2, Ui};
 
 use crate::api::models::{join_names, pick_image};
 use crate::app::App;
 use crate::model::{Action, Page};
 use crate::retro::style::{
     fonts,
-    primitives::{self, ribbon_card, section_eyebrow, text_link},
-    tint,
+    primitives::{self, ribbon_card, section_eyebrow},
     tokens::*,
 };
 
@@ -42,21 +41,21 @@ pub fn show(app: &mut App, ui: &mut Ui) {
 
     ui.add_space(SPACING_LG);
 
-    let results = app.search.results.clone();
-    let Some(results) = results else {
+    let Some(results) = app.search.results.get() else {
         ui.label(egui::RichText::new("Enter artist, song, or album keyword above.").font(fonts::body()).color(INK_MUTED));
         return;
     };
 
     // 1. Album Hits
-    if !results.albums.is_empty() {
+    if let Some(albums) = results.albums.as_ref().filter(|a| !a.items.is_empty()) {
         ui.label(egui::RichText::new("ALBUM MATCHES").font(fonts::heading_3()).color(INK));
         ui.add_space(SPACING_S);
 
-        for (idx, album) in results.albums.iter().take(4).enumerate() {
+        for (idx, album) in albums.items.iter().take(4).enumerate() {
             let card_tint = CatalogTint::ALL[idx % CatalogTint::ALL.len()];
             let cover_url = pick_image(&album.images, 200).map(str::to_string);
             let artists = join_names(album.artists.iter().map(|a| a.name.as_str()));
+            let total = album.total_tracks.unwrap_or(0);
 
             let (resp, _) = ribbon_card(
                 ui,
@@ -67,7 +66,7 @@ pub fn show(app: &mut App, ui: &mut Ui) {
                 Some(app.backend.art()),
                 |ui| {
                     ui.label(egui::RichText::new(format!("ARTIST: {artists}")).font(fonts::body()).color(INK_BLACK));
-                    ui.label(egui::RichText::new(format!("TRACKS: {}", album.total_tracks)).font(fonts::caption()).color(INK_BLACK));
+                    ui.label(egui::RichText::new(format!("TRACKS: {total}")).font(fonts::caption()).color(INK_BLACK));
                 },
             );
 
@@ -79,19 +78,20 @@ pub fn show(app: &mut App, ui: &mut Ui) {
     }
 
     // 2. Track Hits
-    if !results.tracks.is_empty() {
+    if let Some(tracks) = results.tracks.as_ref().filter(|t| !t.items.is_empty()) {
         ui.label(egui::RichText::new("TRACK MATCHES").font(fonts::heading_3()).color(INK));
         ui.add_space(SPACING_S);
 
-        for (idx, track) in results.tracks.iter().take(15).enumerate() {
-            let is_playing = app.playing_track_uri().as_deref() == Some(track.uri.as_str());
+        for (idx, track) in tracks.items.iter().take(15).enumerate() {
+            let is_playing = app.now_playing().as_ref().map(|n| n.uri.as_str()) == Some(track.uri.as_str());
             let duration = format_duration(track.duration_ms);
+            let album_name = track.album.as_ref().map_or("", |a| a.name.as_str());
             let resp = primitives::track_row(
                 ui,
                 idx + 1,
                 &track.name,
                 &join_names(track.artists.iter().map(|a| a.name.as_str())),
-                &track.album.name,
+                album_name,
                 &duration,
                 is_playing,
             );

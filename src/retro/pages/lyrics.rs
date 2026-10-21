@@ -23,7 +23,7 @@ pub fn show(app: &mut App, ui: &mut Ui) {
     };
 
     let lyrics = match &app.lyrics {
-        Loadable::Loading => {
+        Loadable::NotLoaded | Loadable::Loading => {
             ui.label(egui::RichText::new("Retrieving synchronized lyric sheet...").font(fonts::body()).color(INK_MUTED));
             return;
         }
@@ -46,16 +46,16 @@ pub fn show(app: &mut App, ui: &mut Ui) {
 
     ui.vertical_centered(|ui| {
         for (idx, line) in lyrics.lines.iter().enumerate() {
-            let is_active = idx == active_idx;
+            let is_active = Some(idx) == active_idx;
             if is_active {
                 ui.label(
-                    egui::RichText::new(&line.words)
+                    egui::RichText::new(&line.text)
                         .font(fonts::heading_2())
                         .color(YELLOW_STICKER),
                 );
             } else {
                 ui.label(
-                    egui::RichText::new(&line.words)
+                    egui::RichText::new(&line.text)
                         .font(fonts::body())
                         .color(INK_MUTED),
                 );

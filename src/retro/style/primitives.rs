@@ -8,7 +8,7 @@
 //! - Dell Red strictly limited to the CTA play block and top banner time readout
 
 use egui::{
-    pos2, vec2, Align, Align2, Color32, CornerRadius, FontFamily, FontId, Layout, Pos2, Rect,
+    pos2, vec2, Align2, Color32, CornerRadius, FontFamily, FontId, Pos2, Rect,
     Response, Sense, Stroke, Ui, Vec2,
 };
 use std::sync::Arc;
@@ -143,9 +143,8 @@ pub fn ribbon_card<R>(
         pos2(art_rect.min.x - SPACING_MD, body_rect.max.y - SPACING_MD),
     );
 
-    let res = ui.allocate_new_ui(egui::UiBuilder::new().max_rect(text_area), |ui| {
-        content(ui)
-    }).inner;
+    let mut child_ui = ui.new_child(egui::UiBuilder::new().max_rect(text_area));
+    let res = content(&mut child_ui);
 
     ui.add_space(SPACING_MD);
     (response, res)

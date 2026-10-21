@@ -6,14 +6,14 @@
 //! - The screen's singular Dell Red "PLAY FULL RECORD" CTA button
 //! - Data table track listing with sharp borders and period-accurate typography
 
-use egui::{pos2, vec2, Align, Align2, Color32, CornerRadius, Rect, Sense, Stroke, Ui, Vec2};
+use egui::Ui;
 
-use crate::api::models::{join_names, pick_image};
+use crate::api::models::{join_names, pick_image, ArtistRef};
 use crate::app::App;
 use crate::model::Action;
 use crate::retro::style::{
     fonts,
-    primitives::{self, bevel_art, cta_block_red, section_eyebrow, text_link},
+    primitives::{self, bevel_art, cta_block_red, section_eyebrow},
     tint,
     tokens::*,
 };
@@ -57,10 +57,11 @@ pub fn show_album(app: &mut App, ui: &mut Ui, album_id: &str) {
             });
 
             ui.add_space(SPACING_XS);
+            let release = album.release_date.as_deref().unwrap_or("Unknown");
+            let total = album.total_tracks.unwrap_or(0);
             ui.label(
                 egui::RichText::new(format!(
-                    "RELEASE DATE: {} // TOTAL TRACKS: {}",
-                    album.release_date, album.total_tracks
+                    "RELEASE DATE: {release} // TOTAL TRACKS: {total}",
                 ))
                 .font(fonts::caption())
                 .color(INK_MUTED),
@@ -85,14 +86,22 @@ pub fn show_album(app: &mut App, ui: &mut Ui, album_id: &str) {
     ui.label(egui::RichText::new("TRACK LISTING // MASTER TAPES").font(fonts::heading_3()).color(INK));
     ui.add_space(SPACING_S);
 
-    for (idx, track) in album.tracks.items.iter().enumerate() {
-        let is_playing = app.playing_track_uri().as_deref() == Some(track.uri.as_str());
+    let tracks: Vec<crate::api::models::Track> = app
+        .album_pages
+        .get(album_id)
+        .map(|p| p.tracks.items.clone())
+        .filter(|t| !t.is_empty())
+        .or_else(|| album.tracks.as_ref().map(|p| p.items.clone()))
+        .unwrap_or_default();
+
+    for (idx, track) in tracks.iter().enumerate() {
+        let is_playing = app.now_playing().as_ref().map(|n| n.uri.as_str()) == Some(track.uri.as_str());
         let duration = format_duration(track.duration_ms);
         let resp = primitives::track_row(
             ui,
             idx + 1,
             &track.name,
-            &artists_str(&track.artists),
+            &artists_ref_str(&track.artists),
             &album.name,
             &duration,
             is_playing,
@@ -137,8 +146,9 @@ pub fn show_playlist(app: &mut App, ui: &mut Ui, playlist_id: &str) {
             ui.label(egui::RichText::new(&playlist.name).font(fonts::heading_1()).color(INK));
             ui.add_space(SPACING_XS);
 
+            let curator = playlist.owner.display_name.as_deref().unwrap_or("Spotify");
             ui.label(
-                egui::RichText::new(format!("CURATED BY: {}", playlist.owner.display_name))
+                egui::RichText::new(format!("CURATED BY: {curator}"))
                     .font(fonts::body())
                     .color(PRIMARY),
             );
@@ -160,15 +170,22 @@ pub fn show_playlist(app: &mut App, ui: &mut Ui, playlist_id: &str) {
     ui.label(egui::RichText::new("TRACK LISTING").font(fonts::heading_3()).color(INK));
     ui.add_space(SPACING_S);
 
-    for (idx, item) in playlist.tracks.items.iter().enumerate() {
-        let is_playing = app.playing_track_uri().as_deref() == Some(item.track.uri.as_str());
-        let duration = format_duration(item.track.duration_ms);
+    let items = app
+        .playlist_pages
+        .get(playlist_id)
+        .map(|p| p.items.items.clone())
+        .unwrap_or_default();
+
+    for (idx, item) in items.iter().enumerate() {
+        let Some(playable) = item.item.as_ref().or(item.track.as_ref()) else { continue };
+        let is_playing = app.now_playing().as_ref().map(|n| n.uri.as_str()) == Some(playable.uri());
+        let duration = format_duration(playable.duration_ms());
         let resp = primitives::track_row(
             ui,
             idx + 1,
-            &item.track.name,
-            &artists_str(&item.track.artists),
-            &item.track.album.name,
+            playable.name(),
+            &playable.subtitle(),
+            &playlist.name,
             &duration,
             is_playing,
         );
@@ -176,14 +193,14 @@ pub fn show_playlist(app: &mut App, ui: &mut Ui, playlist_id: &str) {
         if resp.clicked() {
             app.actions.push(Action::PlayContext {
                 uri: playlist.uri.clone(),
-                offset_uri: Some(item.track.uri.clone()),
+                offset_uri: Some(playable.uri().to_string()),
                 offset_index: Some(idx as u32),
             });
         }
     }
 }
 
-fn artists_str(artists: &[crate::api::models::Artist]) -> String {
+fn artists_ref_str(artists: &[ArtistRef]) -> String {
     join_names(artists.iter().map(|a| a.name.as_str()))
 }
 

@@ -63,7 +63,7 @@ pub fn clock() -> FontId {
 
 /// Installs the Dell 1996 font hierarchy into egui's context.
 pub fn install_fonts(ctx: &egui::Context) {
-    let mut fonts = egui::FontDefinitions::default();
+    let fonts = egui::FontDefinitions::default();
 
     // If installed system faces exist, load them:
     // Display: Arial Black -> Impact -> DejaVu Sans Bold -> default bold
