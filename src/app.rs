@@ -12431,7 +12431,7 @@ impl App {
         if self.settings.winamp_window {
             crate::ui::winamp::show(self, ui);
         } else {
-            crate::ui::show(self, ui);
+            crate::retro::show(self, ui);
         }
         self.apply_actions(ctx);
         let autoscroll = self.autoscroll.finish(
