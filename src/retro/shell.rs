@@ -164,14 +164,16 @@ fn render_left_rail(app: &mut App, ui: &mut Ui, rect: Rect) {
             .layout(egui::Layout::top_down(Align::Center)),
     );
 
-    // 2x4 Navigation Tile Grid (uniformly 92px wide x 28px high)
+    // 2x4 Navigation Tile Grid (uniformly 91px wide x 28px high)
     let grid_items = [
         ("HOME", Page::Home),
         ("FIND", Page::Search),
+        ("PLAYLISTS", Page::Playlists),
         ("ALBUMS", Page::Albums),
         ("LIKED", Page::LikedSongs),
         ("QUEUE", Page::Queue),
         ("NOW PLAYING", Page::TopSongs),
+        ("SETTINGS", Page::Settings),
     ];
 
     for chunk in grid_items.chunks(2) {
@@ -249,6 +251,7 @@ fn render_central_view(app: &mut App, ui: &mut Ui, rect: Rect) {
             match page {
                 Page::Home => pages::home::show(app, ui),
                 Page::Search => pages::search::show(app, ui),
+                Page::Playlists => pages::library::show(app, ui, pages::library::LibraryTab::Playlists),
                 Page::Albums | Page::Artists => pages::library::show(app, ui, pages::library::LibraryTab::Albums),
                 Page::LikedSongs => pages::library::show(app, ui, pages::library::LibraryTab::LikedSongs),
                 Page::Album(ref id) => pages::collection::show_album(app, ui, id),

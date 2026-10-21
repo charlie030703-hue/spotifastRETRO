@@ -10,7 +10,7 @@ use egui::Ui;
 
 use crate::api::models::{join_names, pick_image, ArtistRef};
 use crate::app::App;
-use crate::model::Action;
+use crate::model::{Action, Page};
 use crate::retro::style::{
     fonts,
     primitives::{self, bevel_art, cta_block_red, section_eyebrow},
@@ -123,6 +123,7 @@ pub fn show_playlist(app: &mut App, ui: &mut Ui, playlist_id: &str) {
     let playlist_data = app.playlist_pages.get(playlist_id).and_then(|p| p.playlist.get()).cloned();
 
     let Some(playlist) = playlist_data else {
+        app.actions.push(Action::LoadMore(Page::Playlist(playlist_id.to_string())));
         ui.label(egui::RichText::new("Loading compilation from Spotify...").font(fonts::body()).color(INK_MUTED));
         return;
     };

@@ -118,6 +118,7 @@ pub enum Page {
     Artists,
     Podcasts,
     Episodes,
+    Playlists,
     Playlist(String),
     Album(String),
     Artist(String),
@@ -141,6 +142,7 @@ impl Page {
             Page::Artists => "artists".into(),
             Page::Podcasts => "podcasts".into(),
             Page::Episodes => "episodes".into(),
+            Page::Playlists => "playlists".into(),
             Page::Playlist(id) => format!("playlist:{id}"),
             Page::Album(id) => format!("album:{id}"),
             Page::Artist(id) => format!("artist:{id}"),
@@ -162,6 +164,7 @@ impl Page {
             "artists" => Page::Artists,
             "podcasts" => Page::Podcasts,
             "episodes" => Page::Episodes,
+            "playlists" => Page::Playlists,
             "queue" => Page::Queue,
             "settings" => Page::Settings,
             other => {

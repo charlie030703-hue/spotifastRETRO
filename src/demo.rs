@@ -7579,6 +7579,7 @@ mod tests {
             Page::Artists,
             Page::Podcasts,
             Page::Episodes,
+            Page::Playlists,
             Page::Playlist("pl1".into()),
             Page::Playlist("missing".into()),
             Page::Album("alb0".into()),

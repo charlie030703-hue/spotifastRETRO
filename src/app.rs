@@ -2874,6 +2874,11 @@ impl App {
                     self.load_more(Page::Episodes);
                 }
             }
+            Page::Playlists => {
+                if self.library.playlists.needs_load() {
+                    self.load_playlists();
+                }
+            }
             Page::Playlist(id) => {
                 let incomplete = match self.playlist_pages.get(&id) {
                     None => true,
@@ -5010,6 +5015,11 @@ impl App {
                     self.load_more(Page::Episodes);
                 }
             }
+            Page::Playlists => {
+                if self.network_reachable && self.library.playlists.needs_load() {
+                    self.load_playlists();
+                }
+            }
             Page::Playlist(id) => {
                 let needs_generation = self
                     .playlist_pages
@@ -5428,6 +5438,11 @@ impl App {
                     self.backend.api(ApiRequest::SavedEpisodes { offset });
                 }
             }
+            Page::Playlists => {
+                if self.library.playlists.needs_load() {
+                    self.load_playlists();
+                }
+            }
             Page::Playlist(id) => {
                 if self.playlist_pages.get(&id).is_some_and(|page| {
                     page.pending_writes > 0
@@ -5627,6 +5642,9 @@ impl App {
             Page::Artists => self.library.artists.reset(),
             Page::Podcasts => self.library.shows.reset(),
             Page::Episodes => self.library.episodes.reset(),
+            Page::Playlists => {
+                self.load_playlists();
+            }
             Page::Playlist(id) => {
                 if let Some(playlist) = self.playlist_pages.get_mut(id) {
                     playlist.items.loading = true;

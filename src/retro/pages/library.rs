@@ -32,12 +32,20 @@ pub fn show(app: &mut App, ui: &mut Ui, tab: LibraryTab) {
 
     // Tab switcher row (1996 button tabs)
     ui.horizontal(|ui| {
-        if primitives::button_primary(ui, "ALBUMS").clicked() {
+        let is_playlists = tab == LibraryTab::Playlists;
+        if primitives::nav_button(ui, "PLAYLISTS", is_playlists, 105.0, 26.0).clicked() {
+            app.actions.push(Action::Open(Page::Playlists));
+        }
+        ui.add_space(SPACING_SM);
+
+        let is_albums = tab == LibraryTab::Albums;
+        if primitives::nav_button(ui, "ALBUMS", is_albums, 100.0, 26.0).clicked() {
             app.actions.push(Action::Open(Page::Albums));
         }
         ui.add_space(SPACING_SM);
 
-        if primitives::button_secondary(ui, "LIKED SONGS").clicked() {
+        let is_liked = tab == LibraryTab::LikedSongs;
+        if primitives::nav_button(ui, "LIKED SONGS", is_liked, 115.0, 26.0).clicked() {
             app.actions.push(Action::Open(Page::LikedSongs));
         }
     });
@@ -82,9 +90,23 @@ pub fn show(app: &mut App, ui: &mut Ui, tab: LibraryTab) {
             }
         }
         LibraryTab::Playlists => {
+            if app.library.playlists.needs_load() {
+                app.actions.push(Action::LoadMore(Page::Playlists));
+            }
+            if app.library.playlists.is_loading() {
+                ui.label(
+                    egui::RichText::new("RETRIEVING MIXTAPES & COMPILATIONS FROM NETWORK ARCHIVE...")
+                        .font(fonts::body())
+                        .color(INK_MUTED),
+                );
+            }
             let playlists = app.library.playlists.get().cloned().unwrap_or_default();
-            if playlists.is_empty() {
-                ui.label(egui::RichText::new("No personal mixtapes found.").font(fonts::body()).color(INK_MUTED));
+            if playlists.is_empty() && !app.library.playlists.is_loading() {
+                ui.label(
+                    egui::RichText::new("No personal mixtapes found in your catalog.")
+                        .font(fonts::body())
+                        .color(INK_MUTED),
+                );
             } else {
                 for (idx, pl) in playlists.iter().enumerate() {
                     let card_tint = CatalogTint::ALL[idx % CatalogTint::ALL.len()];
