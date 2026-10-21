@@ -452,7 +452,7 @@ pub(crate) fn run() -> eframe::Result<()> {
     // Launched from a desktop, stderr goes nowhere; keep the run's log where
     // a bug report can find it, and a line per panic in the panic log (with
     // any link in its message removed: a URL can carry a token).
-    if let Err(error) = fastframe_log::Logging::new("spotifast", env!("CARGO_PKG_VERSION"))
+    if let Err(error) = fastframe_log::Logging::new("spotifast-retro", env!("CARGO_PKG_VERSION"))
         .filter(default_filter)
         .file(dirs.log_file())
         .panic_log(dirs.panic_log())
@@ -847,12 +847,12 @@ fn native_options(
     #[cfg(target_os = "linux")]
     let persistence_path = persistence_path.or_else(|| {
         // Keep the native profile path even when Flatpak supplies its app ID.
-        eframe::storage_dir("spotifast").map(|dir| dir.join("app.ron"))
+        eframe::storage_dir("spotifast-retro").map(|dir| dir.join("app.ron"))
     });
     #[cfg(target_os = "linux")]
     let app_id = desktop_entry();
     #[cfg(not(target_os = "linux"))]
-    let app_id = "spotifast";
+    let app_id = "spotifast-retro";
     let icon = if cfg!(target_os = "macos") {
         // macOS takes the dock icon from the bundle's .icns, which is the
         // 1024px drawing with the platform's rounding. Setting a window
@@ -862,7 +862,7 @@ fn native_options(
         app_icon()
     };
     let viewport = egui::ViewportBuilder::default()
-        .with_title("Spotifast")
+        .with_title("Spotifast Retro")
         .with_app_id(app_id)
         .with_taskbar(true)
         .with_icon(icon);

@@ -1,13 +1,13 @@
 [package]
-name = "spotifast"
-default-run = "spotifast"
+name = "spotifast-retro"
+default-run = "spotifast-retro"
 version = "0.14.1"
 edition = "2024"
 rust-version = "1.98"
 license = "MIT"
-description = "A native Spotify client"
-repository = "https://github.com/crmne/spotifast"
-keywords = ["spotify", "music", "egui", "librespot", "player"]
+description = "A native Spotify client with a Dell 1996 retro aesthetic"
+repository = "https://github.com/charlie030703-hue/spotifastRETRO"
+keywords = ["spotify", "music", "egui", "librespot", "player", "retro"]
 categories = ["multimedia::audio"]
 
 [lib]
@@ -15,7 +15,7 @@ name = "spotifast"
 path = "src/lib.rs"
 
 [[bin]]
-name = "spotifast"
+name = "spotifast-retro"
 path = "src/spotifast.rs"
 
 [dependencies]

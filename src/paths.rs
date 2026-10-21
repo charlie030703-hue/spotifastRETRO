@@ -13,8 +13,8 @@ use std::path::PathBuf;
 /// the single-instance files a running installed copy holds locked and the
 /// logs of its runs.
 const FOLDERS: fastframe_dirs::App = fastframe_dirs::App {
-    not_copied: &["instance", "spotifast.log", "panic.log"],
-    ..fastframe_dirs::App::new("spotifast", "me", "paolino", "spotifast")
+    not_copied: &["instance", "spotifast-retro.log", "panic.log"],
+    ..fastframe_dirs::App::new("spotifast-retro", "me", "paolino", "spotifast-retro")
 };
 
 #[derive(Clone, Debug)]
@@ -98,9 +98,9 @@ impl AppDirs {
     fn fallback() -> Self {
         let fallback = std::env::current_dir().unwrap_or_default();
         Self {
-            config: fallback.join("spotifast-config"),
-            state: fallback.join("spotifast-state"),
-            cache: fallback.join("spotifast-cache"),
+            config: fallback.join("spotifast-retro-config"),
+            state: fallback.join("spotifast-retro-state"),
+            cache: fallback.join("spotifast-retro-cache"),
         }
     }
 
